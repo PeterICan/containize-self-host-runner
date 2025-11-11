@@ -15,6 +15,7 @@ RUN apt-get update \
     git \
     jq \
     libicu-dev \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 
