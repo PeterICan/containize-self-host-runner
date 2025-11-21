@@ -1,30 +1,43 @@
 #!/bin/bash
 
-echo abababababa
-# # 檢查必要的環境變數
-# if [ -z "${GITHUB_URL}" ]; then
-#   echo "錯誤：未設定 GITHUB_URL 環境變數。"
-#   exit 1
-# fi
+# 確保腳本出錯時停止執行
+set -e
 
-# if [ -z "${GITHUB_TOKEN}" ]; then
-#   echo "錯誤：未設定 GITHUB_TOKEN 環境變數。"
-#   exit 1
-# fi
+echo "--------------------------------------------------"
+echo "🚀 Starting GitHub Self-Hosted Runner Container"
+echo "--------------------------------------------------"
 
-# # 移除舊的 runner 註冊 (如果存在的話)
-# # 這很重要，尤其是在重新啟動或更新容器時
-# echo "正在嘗試移除舊的 runner 註冊..."
-# ./config.sh remove --unattended --token "${GITHUB_TOKEN}" --url "${GITHUB_URL}" || true
-# echo "舊的 runner 註冊移除完成 (如果存在的話)。"
+# 1. 配置 Runner
+# 呼叫 action/config_runner.sh 進行動態註冊
+echo "-> Configuring Runner..."
+# 腳本位於 /action 目錄下 (因為 Dockerfile COPY action ./action 且 WORKDIR /)
+if [ -f "/action/config_runner.sh" ]; then
+    source /action/config_runner.sh
+else
+    echo "錯誤: 找不到 /action/config_runner.sh"
+    exit 1
+fi
 
-# # 配置並註冊 runner
-# echo "正在配置 runner..."
-# ./config.sh --url "${GITHUB_URL}" --token "${GITHUB_TOKEN}" --name "$(hostname)" --unattended --replace
+# 2. 啟動 Runner
+echo "--------------------------------------------------"
+echo "🏃 Starting Runner Service..."
+echo "--------------------------------------------------"
 
-# # 啟動 runner
-# echo "正在啟動 runner..."
-# exec ./run.sh
+# 定義清理函數 (當容器停止時執行)
+cleanup() {
+    echo "-> Stopping Runner..."
+    # 這裡可以加入反註冊邏輯，例如 ./config.sh remove --token ...
+    # 但因為 Token 是短期的，可能需要重新取得 Token 才能移除，或是使用 PAT
+    echo "-> Container stopped."
+}
 
+# 捕捉 SIGINT 和 SIGTERM 信號
+trap 'cleanup; exit 130' SIGINT
+trap 'cleanup; exit 143' SIGTERM
 
-# ./config.sh --url https://github.com/PeterICan/containize-self-host-runner --token BI4VMW4F7DRT5XBC3QU2HO3ILERXW
+# 啟動 Runner
+./run.sh & 
+RUNNER_PID=$!
+
+# 等待 Runner 結束
+wait $RUNNER_PID

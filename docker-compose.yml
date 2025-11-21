@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  runner:
+    build: .
+    container_name: self-host-runner_test-runner-1
+    # environment:
+    # 請在 .env 檔案中設定 REPO_URL 或直接在此修改
+    # - REPO_URL=${REPO_URL}
+    volumes:
+      # 掛載宿主機的 PAT.txt 到容器根目錄
+      - ./PAT.txt:/PAT.txt
+    restart: unless-stopped

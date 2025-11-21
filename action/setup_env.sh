@@ -2,7 +2,13 @@
 
 # 取得腳本所在目錄 (相容 source 執行模式)
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-PAT_FILE="$SCRIPT_DIR/../PAT.txt"
+
+# 優先檢查容器內的掛載路徑 /PAT.txt，其次檢查本地開發路徑
+if [ -f "/PAT.txt" ]; then
+    PAT_FILE="/PAT.txt"
+else
+    PAT_FILE="$SCRIPT_DIR/../PAT.txt"
+fi
 
 if [ -f "$PAT_FILE" ]; then
     # 讀取檔案內容並移除換行符號

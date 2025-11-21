@@ -2,7 +2,7 @@
 FROM ubuntu:22.04
 
 # 設定工作目錄
-WORKDIR /actions-runner
+WORKDIR /
 
 # 安裝必要的依賴項
 # curl 用於下載 GitHub Runner 套件
@@ -17,21 +17,27 @@ RUN apt-get update \
     libicu-dev \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+# 使用 Ubuntu 做為基礎映像檔，因為 GitHub Runner 官方支援 Ubuntu
 
 
 # 設定環境變數
-# ACTIONS_RUNNER_VERSION：指定要下載的 GitHub Runner 版本
 # RUNNER_ALLOW_RUNASROOT：允許 Runner 以 root 身份執行 (在容器中通常需要)
-ENV ACTIONS_RUNNER_VERSION="2.317.0"
 ENV RUNNER_ALLOW_RUNASROOT="1"
 
-# 下載並解壓縮 GitHub Runner
-RUN curl -o actions-runner-linux-x64-${ACTIONS_RUNNER_VERSION}.tar.gz -L "https://github.com/actions/runner/releases/download/v${ACTIONS_RUNNER_VERSION}/actions-runner-linux-x64-${ACTIONS_RUNNER_VERSION}.tar.gz" \
-    && tar xzf actions-runner-linux-x64-${ACTIONS_RUNNER_VERSION}.tar.gz
+# 複製 action 目錄 (包含下載與配置腳本)
+COPY action ./action
 
-# 清理下載的 tar 檔案
-RUN rm actions-runner-linux-x64-${ACTIONS_RUNNER_VERSION}.tar.gz
+# 賦予腳本執行權限
+RUN chmod +x action/*.sh
 
+# 執行下載腳本 (建置階段下載 Runner)
+RUN ./action/download_runner.sh && \
+    if [ $? -ne 0 ]; then \
+    echo "Error: download_runner.sh failed."; \
+    exit 1; \
+    fi
+
+ENV ACTION_RUNNER_FOLDER_NAME="actions_runner"
 # 複製啟動腳本到容器中
 COPY entrypoint.sh .
 
